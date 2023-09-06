@@ -53,7 +53,7 @@ class IFWP_Pro_QR_Code_Scanner extends __Singleton {
 			resume.on('click', function(){
 				stop.show();
 				modal.modal('hide');
-				modal_body.html('Loading&hellip;');
+				modal_body.html($this.l10n.loading_message);
                 modal_title.html('QR Code Scanner');
                 $this.on();
             });

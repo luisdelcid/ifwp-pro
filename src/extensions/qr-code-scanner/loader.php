@@ -116,6 +116,7 @@ final class QR_Code_Scanner extends \__Singleton {
         __enqueue('html5-qrcode', 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js', [], '2.3.8');
         __plugin_enqueue('qr-code-scanner.js', ['html5-qrcode', 'wp-api'], [
             'duplicated_message' => __apply_plugin_filters('qr_code_scan_duplicated_message', __('A duplicate event already exists.')),
+			'loading_message' => __apply_plugin_filters('qr_code_scan_loading_message', __('Loading&hellip;')),
         ]);
     }
 
