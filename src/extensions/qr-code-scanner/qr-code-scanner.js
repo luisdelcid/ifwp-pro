@@ -33,26 +33,28 @@ class IFWP_Pro_QR_Code_Scanner extends __Singleton {
         jQuery(function($){
             var modal = $('#' + __plugin_slug('qr-code-scanner-modal')),
                 modal_body = $('#' + __plugin_slug('qr-code-scanner-modal-body')),
+                modal_title = $('#' + __plugin_slug('qr-code-scanner-modal-title')),
                 resume = $('#' + __plugin_slug('qr-code-scanner-resume')),
                 start = $('#' + __plugin_slug('qr-code-scanner-start')),
                 stop = $('#' + __plugin_slug('qr-code-scanner-stop'));
             $this.scan(__plugin_slug('qr-code-scanner'));
 			start.show();
+            start.on('click', function(){
+				$(this).hide();
+				stop.show();
+                $this.on();
+            });
             stop.on('click', function(){
 				$(this).hide();
 				start.show();
                 $this.off();
 				$this.last_scanned_data = '';
             });
-            start.on('click', function(){
-				$(this).hide();
-				stop.show();
-                $this.on();
-            });
 			resume.on('click', function(){
 				stop.show();
 				modal.modal('hide');
 				modal_body.html('Loading&hellip;');
+                modal_title.html('QR Code Scanner');
                 $this.on();
             });
 			__enable_document_visibility();
@@ -155,7 +157,7 @@ class IFWP_Pro_QR_Code_Scanner extends __Singleton {
         }, function(decoded_text, decoded_result){
             $this.success_callback(decoded_text, decoded_result);
         }, function(error_message){
-            alert(error_message);
+            // Silence is golden.
         }).catch(function(err){
             alert(err);
         });
@@ -168,6 +170,7 @@ class IFWP_Pro_QR_Code_Scanner extends __Singleton {
         var $this = this,
             modal = jQuery('#' + __plugin_slug('qr-code-scanner-modal')),
             modal_body = jQuery('#' + __plugin_slug('qr-code-scanner-modal-body')),
+            modal_title = jQuery('#' + __plugin_slug('qr-code-scanner-modal-title')),
             resume = jQuery('#' + __plugin_slug('qr-code-scanner-resume')),
             start = jQuery('#' + __plugin_slug('qr-code-scanner-start')),
             stop = jQuery('#' + __plugin_slug('qr-code-scanner-stop'));
@@ -179,6 +182,7 @@ class IFWP_Pro_QR_Code_Scanner extends __Singleton {
             keyboard: false,
         });
         resume.attr('disabled', 'disabled');
+        modal_title.html(decoded_text);
         if(decoded_text !== $this.last_scanned_data){
             $this.last_scanned_data = decoded_text;
             jQuery.ajax({
@@ -192,13 +196,16 @@ class IFWP_Pro_QR_Code_Scanner extends __Singleton {
                 url: wpApiSettings.root + __plugin_slug(false) + '/v1/qr-code-scan',
             }).done(function(data, textStatus, jqXHR){
                 modal_body.html('<div class="alert alert-' + data.status + ' mb-0" role="alert">' + data.message + '</div>');
+                __do_plugin_action('qr_code_scan_done', data, decoded_text);
             }).fail(function(jqXHR, textStatus, errorThrown){
                 modal_body.html('<div class="alert alert-danger mb-0" role="alert">' + textStatus + '</div>');
+                __do_plugin_action('qr_code_scan_fail', textStatus, decoded_text);
             }).always(function(data_jqXHR, textStatus, jqXHR_errorThrown){
                 resume.removeAttr('disabled');
             });
         } else {
-            modal_body.html('<div class="alert alert-warning mb-0" role="alert">Duplicated!</div>');
+            modal_body.html('<div class="alert alert-warning mb-0" role="alert">' + $this.l10n.duplicated_message + '</div>');
+            __do_plugin_action('qr_code_scan_duplicated', decoded_text);
             resume.removeAttr('disabled');
         }
     }

@@ -78,25 +78,30 @@ final class QR_Code_Scanner extends \__Singleton {
 	 */
 	public function _scan($request){
 		$decoded_text = $request->get_param('decoded_text');
-		$message = sprintf(__("Method '%s' not implemented. Must be overridden in subclass."), 'qr_code_scan');
-		$message = __first_p($message);
 		$data = [
-			'message' => $message,
+			'message' => sprintf(__("Method '%s' not implemented. Must be overridden in subclass."), __plugin_prefix('qr_code_scan')),
 			'metadata' => [],
 			'status' => 'danger',
 		];
 		$data = __apply_plugin_filters('qr_code_scan', $data, $decoded_text);
-		if(!in_array($data['status'], ['danger', 'success', 'warning'])){
+        $data = shortcode_atts([
+            'message' => __('Error') . '.',
+			'metadata' => [],
+			'status' => 'danger',
+        ], $data);
+		if(!in_array($data['status'], ['danger', 'info', 'success', 'warning'])){
 			$data['status'] = 'danger';
 		}
 		if(!$data['message']){
 			$data['message'] = __('Error') . '.';
 		}
+        if(!__is_associative_array($data['metadata'])){
+            $data['metadata'] = [];
+        }
 		$response = new \WP_REST_Response($data);
 		$response->set_headers([
 	        'Cache-Control' => 'no-cache',
 	    ]);
-		// log
         return $response;
     }
 
@@ -109,7 +114,9 @@ final class QR_Code_Scanner extends \__Singleton {
             return;
         }
         __enqueue('html5-qrcode', 'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js', [], '2.3.8');
-        __plugin_enqueue('qr-code-scanner.js', ['html5-qrcode', 'wp-api']);
+        __plugin_enqueue('qr-code-scanner.js', ['html5-qrcode', 'wp-api'], [
+            'duplicated_message' => __apply_plugin_filters('qr_code_scan_duplicated_message', __('A duplicate event already exists.')),
+        ]);
     }
 
 	/**
@@ -121,7 +128,7 @@ final class QR_Code_Scanner extends \__Singleton {
 	<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
 		<div class="modal-content shadow-lg">
 			<div class="modal-header">
-				<h5 class="modal-title" id="<?php echo __plugin_slug('qr-code-scanner-modal-title'); ?>">QR Code Scanner</h5>
+				<h5 class="modal-title text-truncate" id="<?php echo __plugin_slug('qr-code-scanner-modal-title'); ?>">QR Code Scanner</h5>
 			</div>
 			<div id="<?php echo __plugin_slug('qr-code-scanner-modal-body'); ?>" class="modal-body"><?php echo __('Loading&hellip;'); ?></div>
 			<div class="modal-footer">
