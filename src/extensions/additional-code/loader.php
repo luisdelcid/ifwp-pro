@@ -11,7 +11,7 @@ final class Additional_Code extends \__Singleton {
 		$dir = plugin_dir_path(__FILE__);
 		$dirname = wp_basename($dir);
 		$extension = __canonicalize($dirname);
-		$extensions[$extension] = 'Additional CSS and JavaScript';
+		$extensions[$extension] = 'Additional code (CSS and JavaScript)';
 		return $extensions;
 	}
 
@@ -117,7 +117,10 @@ final class Additional_Code extends \__Singleton {
 						'title' => __('Published'),
 					],
 					'id' => __plugin_prefix('code_status'),
+					'off_label' => __('No'),
+					'on_label' => __('Yes'),
 					'std' => 1,
+					'style' => 'square',
 					'type' => 'switch',
 				],
 			],
