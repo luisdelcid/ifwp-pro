@@ -28,7 +28,9 @@ final class Additional_Image_Sizes extends \__Singleton {
 	 * @return void
 	 */
 	public function load(){
-        __add_larger_image_sizes();
+		__add_image_size('HD', 1280, 1280);
+		__add_image_size('Full HD', 1920, 1920);
+		__add_image_size('4K', 3840, 3840);
 	}
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
