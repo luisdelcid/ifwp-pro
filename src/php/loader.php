@@ -34,6 +34,14 @@ final class Loader {
 	/**
 	 * @return array
 	 */
+	public static function _plugin_action_links($actions, $plugin_file, $plugin_data, $context){
+		$actions[] = '<a href="' . admin_url('options-general.php?page=ifwp-pro-ext') . '">' . __('Settings') . '</a>';
+		return $actions;
+	}
+
+	/**
+	 * @return array
+	 */
 	public static function _rwmb_meta_boxes($meta_boxes){
 		$fields = [];
 		$options = __apply_plugin_filters('extensions', []);
@@ -96,6 +104,7 @@ final class Loader {
 			__add_admin_notice($message);
 			return;
 		}
+        add_filter('plugin_action_links_' . plugin_basename($file), [__CLASS__, '_plugin_action_links'], 10, 4);
 		$option = __plugin_prefix('ext');
 		$value = (array) get_option($option, []);
 		self::$extensions = isset($value['extensions']) ? $value['extensions'] : [];
