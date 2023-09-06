@@ -146,8 +146,9 @@ final class Additional_Code extends \__Singleton {
 			echo '<style id="' . __plugin_slug('additional-css') . '">';
 			foreach($posts as $post){
 				if(apply_filters(__plugin_prefix('additional_css'), true, $post)){
-					echo "\n" . '/* ' . esc_html($post->post_title) . '*/' . "\n";
+					echo "\n" . '/* ' . esc_html($post->post_title) . ' */' . "\n";
 					echo get_post_meta($post->ID, __plugin_prefix('additional_css'), true);
+					echo "\n";
 				}
 			}
 			echo '</style>';
@@ -172,8 +173,9 @@ final class Additional_Code extends \__Singleton {
 			echo '<script id="' . __plugin_slug('additional-javascript') . '">';
 			foreach($posts as $post){
 				if(apply_filters(__plugin_prefix('additional_javascript'), true, $post)){
-					echo "\n" . '/* ' . esc_html($post->post_title) . '*/' . "\n";
+					echo "\n" . '/* ' . esc_html($post->post_title) . ' */' . "\n";
 					echo get_post_meta($post->ID, __plugin_prefix('additional_javascript'), true);
+					echo "\n";
 				}
 			}
 			echo '</script>';
