@@ -1,6 +1,6 @@
 <?php namespace IFWP_Pro;
 
-final class Cloudinary extends \__Singleton {
+final class Cloudinary_Image_Sizes extends \__Singleton {
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
