@@ -11,7 +11,7 @@ final class QR_Code_Scanner extends \__Singleton {
 		$dir = plugin_dir_path(__FILE__);
 		$dirname = wp_basename($dir);
 		$extension = __canonicalize($dirname);
-		$extensions[$extension] = 'QR Code Scanner';
+		$extensions[$extension] = 'QR code scanner';
 		return $extensions;
 	}
 
@@ -46,7 +46,7 @@ final class QR_Code_Scanner extends \__Singleton {
 	            $content = '<div class="alert alert-danger mb-0" role="alert">' .  $message . '</div>';
 	        } else {
 				$content = '<div id="' . __plugin_slug('qr-code-scanner-wrapper') . '">';
-	            $content .= '<div class="d-none">QR Code Scanner requires Bootstrap v4.6+</div>';
+	            $content .= '<div class="d-none">QR code scanner requires Bootstrap v4.6+</div>';
 				$content .= '<div class="bg-dark embed-responsive embed-responsive-1by1 mb-3 rounded-lg">';
 				$content .= '<div class="embed-responsive-item">';
 				$content .= '<div id="' . __plugin_slug('qr-code-scanner') . '" class="h-100 overflow-hidden w-100"></div>';
@@ -124,12 +124,14 @@ final class QR_Code_Scanner extends \__Singleton {
 	 * @return void
 	 */
 	public function _wp_footer(){
-		ob_start(); ?>
-<div class="modal" id="<?php echo __plugin_slug('qr-code-scanner-modal'); ?>" tabindex="-1" aria-labelledby="<?php echo __plugin_slug('qr-code-scanner-modal-title'); ?>" aria-hidden="true">
+		ob_start();
+		$backdrop = __apply_plugin_filters('qr_code_scan_modal_backdrop', 'static');
+		$keyboard = __apply_plugin_filters('qr_code_scan_modal_keyboard', 'false'); ?>
+<div class="modal" data-backdrop="<?php echo $backdrop; ?>" data-keyboard="<?php echo $keyboard; ?>" id="<?php echo __plugin_slug('qr-code-scanner-modal'); ?>" tabindex="-1" aria-labelledby="<?php echo __plugin_slug('qr-code-scanner-modal-title'); ?>" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
 		<div class="modal-content shadow-lg">
 			<div class="modal-header">
-				<h5 class="modal-title text-truncate" id="<?php echo __plugin_slug('qr-code-scanner-modal-title'); ?>">QR Code Scanner</h5>
+				<h5 class="modal-title text-truncate" id="<?php echo __plugin_slug('qr-code-scanner-modal-title'); ?>">QR code scanner</h5>
 			</div>
 			<div id="<?php echo __plugin_slug('qr-code-scanner-modal-body'); ?>" class="modal-body"><?php echo __('Loading&hellip;'); ?></div>
 			<div class="modal-footer">

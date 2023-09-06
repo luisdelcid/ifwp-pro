@@ -177,10 +177,7 @@ class IFWP_Pro_QR_Code_Scanner extends __Singleton {
         $this.scanner.pause(true);
         start.hide();
         stop.hide();
-        modal.modal({
-            backdrop: 'static',
-            keyboard: false,
-        });
+        modal.modal();
         resume.attr('disabled', 'disabled');
         modal_title.html(decoded_text);
         if(decoded_text !== $this.last_scanned_data){
