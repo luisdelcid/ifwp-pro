@@ -1,0 +1,12 @@
+.ifwp-pro-ace-container {
+	background-color: #272822; /* monokai */
+	border: 1px solid #8c8f94;
+	border-radius: 4px;
+	box-sizing: border-box;
+	padding: 4px;
+	width: 100%;
+}
+#ifwp_pro_additional_css,
+#ifwp_pro_additional_javascript {
+	display: none;
+}
