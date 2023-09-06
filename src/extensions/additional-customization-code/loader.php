@@ -1,6 +1,6 @@
 <?php namespace IFWP_Pro;
 
-final class Additional_Code extends \__Singleton {
+final class Additional_Customization_Code extends \__Singleton {
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -11,7 +11,7 @@ final class Additional_Code extends \__Singleton {
 		$dir = plugin_dir_path(__FILE__);
 		$dirname = wp_basename($dir);
 		$extension = __canonicalize($dirname);
-		$extensions[$extension] = 'Additional code (CSS and JavaScript)';
+		$extensions[$extension] = 'Additional customization code (CSS and JavaScript)';
 		return $extensions;
 	}
 
@@ -52,10 +52,10 @@ final class Additional_Code extends \__Singleton {
 			default:
 				return;
 		}
-		__plugin_enqueue('additional-code.css');
+		__plugin_enqueue('additional-customization-code.css');
 		__enqueue('ace', 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.24.1/ace.js', [], '1.24.1');
 		__enqueue('ace-language-tools', 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.24.1/ext-language_tools.min.js', ['ace'], '1.24.1');
-		__plugin_enqueue('additional-code.js', ['ace-language-tools'], [
+		__plugin_enqueue('additional-customization-code.js', ['ace-language-tools'], [
 			'base_path' => 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.24.1',
 		]);
     }

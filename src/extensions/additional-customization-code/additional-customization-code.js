@@ -1,4 +1,4 @@
-class IFWP_Pro_Additional_Code extends __Singleton {
+class IFWP_Pro_Additional_Customization_Code extends __Singleton {
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -54,4 +54,4 @@ class IFWP_Pro_Additional_Code extends __Singleton {
 
 }
 
-IFWP_Pro_Additional_Code.get_instance();
+IFWP_Pro_Additional_Customization_Code.get_instance();
