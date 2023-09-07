@@ -27,17 +27,47 @@ final class Private_Update_Server extends \__Singleton {
 	private $dir = '';
 
 	/**
+	 * @return bool
+	 */
+	private function is_github($slug = ''){
+		$url = (string) wp_http_validate_url($this->plugin[$slug]);
+		return (0 === strpos($url, 'https://github.com/'));
+	}
+
+	/**
+	 * @return bool|string
+	 */
+	private function plugin($slug = ''){
+		$plugins = $this->plugins();
+		return isset($plugins[$slug]) ? (string) $plugins[$slug] : false;
+	}
+
+	/**
+	 * @return bool
+	 */
+	private function plugin_exists($slug = ''){
+		return (false !== $this->plugin($slug));
+	}
+
+	/**
+	 * @return array
+	 */
+	private function plugins(){
+		$plugins = (array) __apply_plugin_filters('private_update_server_plugins', []);
+		return $plugins;
+	}
+
+	/**
 	 * @return void
 	 */
 	private function download_plugin(){
         if(!is_user_logged_in()){
             auth_redirect();
         }
-        $slug = isset($_GET['slug']) ? $_GET['slug'] : '';
-        $slugs = $this->slugs();
-        if(!in_array($slug, $slugs)){
-            __exit_with_error(__('Invalid plugin page.'), 404);
-        }
+		$slug = isset($_GET['slug']) ? $_GET['slug'] : '';
+		if(!$this->plugin_exists($slug)){
+			__exit_with_error(__('Invalid plugin page.'), 404);
+		}
         $dir = $this->dir();
         if(is_wp_error($dir)){
             __exit_with_error($dir);
@@ -108,42 +138,53 @@ final class Private_Update_Server extends \__Singleton {
 	}
 
 	/**
-	 * @return array
-	 */
-	private function slugs(){
-		$slugs = __apply_plugin_filters('private_update_server_slugs', []);
-		return $slugs;
-	}
-
-	/**
 	 * @return bool|WP_Error
 	 */
-	private function update_plugin($slug, $plugin = [], $force = false){
+	private function update_plugin($slug = '', $plugin = [], $force = false){
+		if(!$this->plugin_exists($slug)){
+			return __error(__('Invalid plugin page.'));
+		}
 		$dir = $this->dir();
-        if(is_wp_error($dir)){
+		if(is_wp_error($dir)){
 			return $dir;
 		}
 		$filename = $slug . '.zip';
 		$packages = $dir . '/packages'; // Full path, no trailing slash.
 		$file = $packages . '/' . $filename;
-		if(file_exists($file) and !$force){
-			$data = __get_remote_data($slug);
-			if(is_wp_error($data)){
-				return $data;
-			}
-			if(version_compare($plugin['data']['Version'], $data['version'], '<=')){
+		if($this->is_github($slug)){
+			if(file_exists($file) and !$force){
 				return true;
 			}
+			$fs = __filesystem();
+			if(is_wp_error($fs)){
+				return $fs;
+			}
+			$file = __github_download_main($this->plugin($slug), [
+				'filename' => $file,
+			]);
+			if(is_wp_error($file)){
+				return $file;
+			}
+		} else {
+			if(file_exists($file) and !$force){
+				$data = __get_remote_data($slug);
+				if(is_wp_error($data)){
+					return $data;
+				}
+				if(version_compare($plugin['data']['Version'], $data['version'], '<=')){
+					return true;
+				}
+			}
+			$commands = [];
+			if(file_exists($file)){
+				$commands[] = 'cd ' . $packages;
+				$commands[] = 'rm ' . $filename;
+			}
+			$commands[] = 'cd ' . WP_PLUGIN_DIR;
+			$commands[] = 'zip -r ' . $file . ' ' . $slug;
+			$commands = implode(' && ', $commands);
+			exec($commands);
 		}
-		$commands = [];
-		if(file_exists($file)){
-			$commands[] = 'cd ' . $packages;
-			$commands[] = 'rm ' . $filename;
-		}
-		$commands[] = 'cd ' . WP_PLUGIN_DIR;
-		$commands[] = 'zip -r ' . $file . ' ' . $slug;
-		$commands = implode(' && ', $commands);
-		exec($commands);
 		$data = __get_remote_data($slug);
 		if(is_wp_error($data)){
 			return $data;
@@ -163,8 +204,9 @@ final class Private_Update_Server extends \__Singleton {
 			__exit_with_error(__('Sorry, you are not allowed to update plugins for this site.'), __('You need a higher level of permission.'), 403);
         }
 		$errors = false;
-        $slugs = $this->slugs();
-        if($slugs){
+		$plugins = $this->plugins();
+        if($plugins){
+			$slugs = array_keys($plugins);
 			$force = (isset($_GET['force']) ? boolval($_GET['force']) : false);
             foreach($slugs as $slug){
                 $data = __get_local_data($slug);
@@ -286,8 +328,7 @@ final class Private_Update_Server extends \__Singleton {
 		], $atts, $tag);
 		$key = $atts['key'];
 		$slug = $atts['slug'];
-		$slugs = $this->slugs();
-		if(!in_array($slug, $slugs)){
+		if(!$this->plugin_exists($slug)){
 			return __('Something went wrong.');
 		}
 		$option = __plugin_prefix('private_update_server_data_' . $slug);
@@ -305,43 +346,6 @@ final class Private_Update_Server extends \__Singleton {
 		}
 		$html .= wp_strip_all_tags($arr[$key]);
 		if('version' === $key and current_user_can('manage_options')){
-			$plugin = $this->get_local_data($slug);
-			if(is_wp_error($plugin)){
-				$html .= ' &#8212; <span class="text-danger">' . $plugin->get_error_message() . '</span>';
-			} else {
-				if(version_compare($plugin['data']['Version'], $data['version'], '>')){
-					$html .= ' &#8212; <span class="text-danger">' . __first_p(sprintf(__('There is a new version of %1$s available. <a href="%2$s" %3$s>View version %4$s details</a>.'), $plugin['data']['Name'], '#', '', $plugin['data']['Version'])) . '</span>';
-				}
-			}
-		}
-		return $html;
-
-        $tag = __plugin_prefix('plugin_data');
-		$atts = shortcode_atts([
-			'key' => '',
-			'slug' => '',
-		], $atts, $tag);
-		$key = $atts['key'];
-		$slug = $atts['slug'];
-		$slugs = $this->slugs();
-		if(!in_array($slug, $slugs)){
-			return __('Something went wrong.');
-		}
-		$option = __plugin_prefix('plugin_data_' . $slug);
-		$data = get_option($option, []);
-		if(!$data){
-			return __('Plugin not found.');
-		}
-		$html = '';
-		if(array_key_exists($key, $data)){
-			$arr = $data;
-		} elseif(array_key_exists($key, $data['sections'])){
-			$arr = $data['sections'];
-		} else {
-			return $key . ' ' . __('(not found)');
-		}
-		$html .= wp_strip_all_tags($arr[$key]);
-		if('name' === $key and current_user_can('manage_options')){
 			$plugin = $this->get_local_data($slug);
 			if(is_wp_error($plugin)){
 				$html .= ' &#8212; <span class="text-danger">' . $plugin->get_error_message() . '</span>';
