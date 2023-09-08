@@ -12,7 +12,7 @@ Plugin URI: https://ifwp.pro/
 Requires at least: 5.6
 Requires PHP: 5.6
 Text Domain: ifwp-pro
-Version: 0.9.5.13
+Version: 0.9.6
 */
 
 defined('ABSPATH') or die('Hi there! I\'m just a plugin, not much I can do when called directly.');

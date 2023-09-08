@@ -1,6 +1,6 @@
 <?php namespace IFWP_Pro;
 
-final class Private_Update_Server extends \__Singleton {
+final class Custom_Update_API extends \__Singleton {
 
 	// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -11,7 +11,7 @@ final class Private_Update_Server extends \__Singleton {
 		$dir = plugin_dir_path(__FILE__);
 		$dirname = wp_basename($dir);
 		$extension = __canonicalize($dirname);
-		$extensions[$extension] = 'Private update server';
+		$extensions[$extension] = 'Custom update API';
 		return $extensions;
 	}
 
@@ -27,54 +27,24 @@ final class Private_Update_Server extends \__Singleton {
 	private $dir = '';
 
 	/**
-	 * @return bool
-	 */
-	private function is_github($slug = ''){
-		$url = (string) wp_http_validate_url($this->plugin[$slug]);
-		return (0 === strpos($url, 'https://github.com/'));
-	}
-
-	/**
-	 * @return bool|string
-	 */
-	private function plugin($slug = ''){
-		$plugins = $this->plugins();
-		return isset($plugins[$slug]) ? (string) $plugins[$slug] : false;
-	}
-
-	/**
-	 * @return bool
-	 */
-	private function plugin_exists($slug = ''){
-		return (false !== $this->plugin($slug));
-	}
-
-	/**
-	 * @return array
-	 */
-	private function plugins(){
-		$plugins = (array) __apply_plugin_filters('private_update_server_plugins', []);
-		return $plugins;
-	}
-
-	/**
 	 * @return void
 	 */
-	private function download_plugin(){
+	private function download_plugin($slug = ''){
         if(!is_user_logged_in()){
             auth_redirect();
         }
-		$slug = isset($_GET['slug']) ? $_GET['slug'] : '';
-		if(!$this->plugin_exists($slug)){
-			__exit_with_error(__('Invalid plugin page.'), 404);
-		}
-        $dir = $this->dir();
-        if(is_wp_error($dir)){
-            __exit_with_error($dir);
+        if(!$this->plugin_exists($slug)){
+            $error = __error(__('Invalid plugin page.'), 404);
+            __exit_with_error($error);
         }
-        $file = $dir . '/packages/' . $slug . '.zip';
+        $packages = $this->packages_dir();
+        if(is_wp_error($packages)){
+            __exit_with_error($packages);
+        }
+        $file = $packages . '/' . $slug . '.zip';
         if(!file_exists($file)){
-			__exit_with_error(__('Installation package not available.'), 503);
+            $error = __error(__('Installation package not available.'), 503);
+			__exit_with_error($error);
         }
         $data = $this->get_remote_data($slug);
         if(is_wp_error($data)){
@@ -85,7 +55,8 @@ final class Private_Update_Server extends \__Singleton {
         ];
         $filetype = wp_check_filetype($file, $mimes);
         if(!$filetype['type']){
-            __exit_with_error(__('Incompatible Archive.'));
+            $error = __error(__('Incompatible Archive.'));
+            __exit_with_error($error);
         }
         nocache_headers();
         header('Content-Type: ' . $filetype['type']); // Always send this.
@@ -102,11 +73,8 @@ final class Private_Update_Server extends \__Singleton {
 	 * @return array|WP_Error
 	 */
 	private function get_local_data($slug = ''){
-		$basename = $slug . '/' . $slug . '.php';
+        $basename = $slug . '/' . $slug . '.php';
 		$file = WP_PLUGIN_DIR . '/' . $basename;
-		if(!is_file($file)){
-			return __error(__('File does not exist?'), $file);
-		}
 		$data = __plugin_data($file, true, false);
 		if(is_wp_error($data)){
 			return $data;
@@ -138,65 +106,85 @@ final class Private_Update_Server extends \__Singleton {
 	}
 
 	/**
-	 * @return bool|WP_Error
+	 * @return string|WP_Error
 	 */
-	private function update_plugin($slug = '', $plugin = [], $force = false){
-		if(!$this->plugin_exists($slug)){
-			return __error(__('Invalid plugin page.'));
-		}
-		$dir = $this->dir();
+	private function packages_dir(){
+        $dir = $this->dir();
 		if(is_wp_error($dir)){
 			return $dir;
 		}
-		$filename = $slug . '.zip';
 		$packages = $dir . '/packages'; // Full path, no trailing slash.
+        return $packages;
+	}
+
+	/**
+	 * @return bool
+	 */
+	private function plugin_exists($slug = ''){
+        $basename = $slug . '/' . $slug . '.php';
+        $file = WP_PLUGIN_DIR . '/' . $basename;
+        $plugins = $this->plugins();
+		return (in_array($slug, $plugins) and is_file($file));
+	}
+
+	/**
+	 * @return array
+	 */
+	private function plugins(){
+		$plugins = (array) __apply_plugin_filters('custom_update_api_plugins', []);
+		return $plugins;
+	}
+
+	/**
+	 * @return bool|WP_Error
+	 */
+	private function update_plugin($slug = '', $force = false){
+        if(!$this->plugin_exists($slug)){
+            return __error(__('Invalid plugin page.'), 404);
+        }
+        $packages = $this->packages_dir();
+        if(is_wp_error($packages)){
+            return $packages;
+        }
+        $plugin = $this->get_local_data($slug);
+        if(is_wp_error($plugin)){
+            return $plugin;
+        }
+		$filename = $slug . '.zip';
 		$file = $packages . '/' . $filename;
-		if($this->is_github($slug)){
-			if(file_exists($file) and !$force){
-				return true;
-			}
-			$fs = __filesystem();
-			if(is_wp_error($fs)){
-				return $fs;
-			}
-			$file = __github_download_main($this->plugin($slug), [
-				'filename' => $file,
-			]);
-			if(is_wp_error($file)){
-				return $file;
-			}
-		} else {
-			if(file_exists($file) and !$force){
-				$data = __get_remote_data($slug);
-				if(is_wp_error($data)){
-					return $data;
-				}
-				if(version_compare($plugin['data']['Version'], $data['version'], '<=')){
-					return true;
-				}
-			}
-			$commands = [];
-			if(file_exists($file)){
-				$commands[] = 'cd ' . $packages;
-				$commands[] = 'rm ' . $filename;
-			}
-			$commands[] = 'cd ' . WP_PLUGIN_DIR;
-			$commands[] = 'zip -r ' . $file . ' ' . $slug;
-			$commands = implode(' && ', $commands);
-			exec($commands);
-		}
-		$data = __get_remote_data($slug);
+        if(file_exists($file) and !$force){
+            $data = $this->get_remote_data($slug);
+            if(is_wp_error($data)){
+                return $data;
+            }
+            if(version_compare($plugin['data']['Version'], $data['version'], '<=')){
+                return true;
+            }
+            $error = __('You are uploading an older version of a current plugin. You can continue to install the older version, but be sure to <a href="%s">back up your database and files</a> first.');
+            $error = __first_p($error);
+            return __error($error);
+        }
+        $commands = [];
+        if(file_exists($file)){
+            $commands[] = 'cd ' . $packages;
+            $commands[] = 'rm ' . $filename;
+        }
+        $commands[] = 'cd ' . WP_PLUGIN_DIR;
+        $commands[] = 'zip -r ' . $file . ' ' . $slug;
+        $commands = implode(' && ', $commands);
+        exec($commands);
+		$data = $this->get_remote_data($slug);
 		if(is_wp_error($data)){
 			return $data;
 		}
-		$option = __plugin_prefix('private_update_server_data_' . $slug);
+		$option = __plugin_prefix('custom_update_api_data_' . $slug);
 		return update_option($option, $data);
 	}
 
 	/**
 	 * @return void
 	 */
-	private function update_plugins(){
+	private function update_plugins($force = false){
         if(!is_user_logged_in()){
             auth_redirect();
         }
@@ -204,18 +192,12 @@ final class Private_Update_Server extends \__Singleton {
 			__exit_with_error(__('Sorry, you are not allowed to update plugins for this site.'), __('You need a higher level of permission.'), 403);
         }
 		$errors = false;
-		$plugins = $this->plugins();
-        if($plugins){
-			$slugs = array_keys($plugins);
-			$force = (isset($_GET['force']) ? boolval($_GET['force']) : false);
+		$slugs = $this->plugins();
+        if($slugs){
             foreach($slugs as $slug){
-                $data = __get_local_data($slug);
-                if(is_wp_error($data)){
-                    continue;
-                }
-                $result = $this->update_plugin($slug, $data, $force);
+                $result = $this->update_plugin($slug, $force);
                 if(is_wp_error($result)){
-					$errors = true; // Silence is golden.
+					$errors = true;
                 }
             }
         }
@@ -242,8 +224,17 @@ final class Private_Update_Server extends \__Singleton {
             __exit_with_error($dir);
         }
         $url = site_url('wp-update-server/');
-        require_once(plugin_dir_path(__FILE__) . 'custom-update-server.php');
-        $update_server = new Custom_Update_Server($url, $dir);
+        $file = plugin_dir_path(__FILE__) . 'wp-update-server.php';
+        if(!file_exists($file)){
+            $error = __error(__('File doesn&#8217;t exist?'), $file);
+            __exit_with_error($error);
+        }
+        require_once($file);
+        if(!class_exists(__NAMESPACE__ . '\WP_Update_Server')){
+            $error = __error(__('One or more required modules are missing'));
+            __exit_with_error($error);
+        }
+        $update_server = new WP_Update_Server($url, $dir);
         $update_server->handleRequest();
         exit;
 	}
@@ -274,9 +265,6 @@ final class Private_Update_Server extends \__Singleton {
 	 * @return void
 	 */
 	public function _admin_init(){
-		if(!__has_plugin_filter('private_update_server_slugs')){
-			return;
-		}
 		if('/%postname%/' === get_option('permalink_structure')){
 			return;
 		}
@@ -290,9 +278,6 @@ final class Private_Update_Server extends \__Singleton {
 	 * @return void
 	 */
 	public function _init(){
-		if(!__has_plugin_filter('private_update_server_slugs')){
-			return;
-		}
 		$tag = 'plugin_data';
 		add_shortcode($tag, [$this, '_plugin_data']);
 	}
@@ -301,15 +286,28 @@ final class Private_Update_Server extends \__Singleton {
 	 * @return void
 	 */
 	public function _parse_request($wp){
-		if(!__has_plugin_filter('private_update_server_slugs')){
-			return;
-		}
         switch($wp->request){
             case 'download-plugin':
-                $this->download_plugin();
+                $slug = isset($_GET['slug']) ? $_GET['slug'] : '';
+                $this->download_plugin($slug);
+                break;
+            case 'update-plugin':
+                if(!is_user_logged_in()){
+                    auth_redirect();
+                }
+                $slug = isset($_GET['slug']) ? $_GET['slug'] : '';
+                $force = isset($_GET['force']) ? (bool) $_GET['force'] : false;
+                $result = $this->update_plugin($slug, $force);
+                if(is_wp_error($result)){
+                    __exit_with_error($result);
+                }
+                $url = home_url();
+                wp_safe_redirect($url);
+                exit;
                 break;
             case 'update-plugins':
-                $this->update_plugins();
+                $force = isset($_GET['force']) ? (bool) $_GET['force'] : false;
+                $this->update_plugins($force);
                 break;
             case 'wp-update-server':
                 $this->update_server();
@@ -321,7 +319,7 @@ final class Private_Update_Server extends \__Singleton {
 	 * @return string
 	 */
 	public function _plugin_data($atts, $content = ''){
-		$tag = __plugin_prefix('private_update_server_data');
+		$tag = __plugin_prefix('custom_update_api_data');
 		$atts = shortcode_atts([
 			'key' => '',
 			'slug' => '',
@@ -331,7 +329,7 @@ final class Private_Update_Server extends \__Singleton {
 		if(!$this->plugin_exists($slug)){
 			return __('Something went wrong.');
 		}
-		$option = __plugin_prefix('private_update_server_data_' . $slug);
+		$option = __plugin_prefix('custom_update_api_data_' . $slug);
 		$data = get_option($option, []);
 		if(!$data){
 			return __('Plugin not found.');
